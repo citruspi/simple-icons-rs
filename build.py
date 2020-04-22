@@ -95,7 +95,7 @@ def generate_crate():
     shutil.rmtree('./crate', ignore_errors=True)
     os.makedirs('./crate/src')
 
-    expand_icon = lambda i: f"\"{i['slug']}\" => Icon{{title: \"{i['title']}\", slug: \"{i['slug']}\", hex: \"{i['hex']}\", source: \"{i['source']}\", svg: \"{i['svg']}\", path: \"{i['path']}\"}},"
+    expand_icon = lambda i: f"\"{i['slug']}\" => Icon{{title: \"{i['title']}\".into(), slug: \"{i['slug']}\".into(), hex: \"{i['hex']}\".into(), source: \"{i['source']}\".into(), svg: \"{i['svg']}\".into(), path: \"{i['path']}\".into()}},"
     expand_all_icons = lambda ds: '\n        '.join([expand_icon(icon) for icon in ds])
 
     with open('./crate/Cargo.toml', 'w') as f:
@@ -112,12 +112,12 @@ edition = "2018"
 
     with open('./crate/src/lib.rs', 'w') as f:
         f.write(f'''pub struct Icon {{
-    title: &str,
-    slug: &str,
-    hex: &str,
-    source: &str,
-    svg: &str,
-    path: &str,
+    title: String,
+    slug: String,
+    hex: String,
+    source: String,
+    svg: String,
+    path: String,
 }}
 
 pub fn get(name: &str) -> Option<Icon> {{
