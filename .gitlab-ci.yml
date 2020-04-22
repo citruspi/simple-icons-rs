@@ -27,4 +27,4 @@ publish_dry_run:
     - cargo login $CRATES_IO_TOKEN
     - cd crate
   script:
-    - cargo publish --dry-run
+    - cargo publish --dry-run --allow-dirty
