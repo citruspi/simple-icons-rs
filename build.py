@@ -95,7 +95,7 @@ def generate_crate():
     shutil.rmtree('./crate', ignore_errors=True)
     os.makedirs('./crate/src')
 
-    expand_icon = lambda i: f"\"{i['slug']}\" => Icon{{title: \"{i['title']}\".into(), slug: \"{i['slug']}\".into(), hex: \"{i['hex']}\".into(), source: \"{i['source']}\".into(), svg: \"{i['svg']}\".into(), path: \"{i['path']}\".into()}},"
+    expand_icon = lambda i: f"\"{i['slug']}\" => Some(Icon{{title: \"{i['title']}\".into(), slug: \"{i['slug']}\".into(), hex: \"{i['hex']}\".into(), source: \"{i['source']}\".into(), svg: \"{i['svg']}\".into(), path: \"{i['path']}\".into()}}),"
     expand_all_icons = lambda ds: '\n        '.join([expand_icon(icon) for icon in ds])
 
     with open('./crate/Cargo.toml', 'w') as f:
