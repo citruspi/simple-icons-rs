@@ -3,6 +3,9 @@
 
 import json
 import re
+import sys
+import shutil
+import os
 import urllib.request
 
 
@@ -75,3 +78,49 @@ def generate_icon_dataset():
         icon['path'] = match.group(1)
 
     return data
+
+
+def generate_crate():
+    shutil.rmtree('./crate', ignore_errors=True)
+    os.makedirs('./crate/src')
+
+    expand_icon = lambda i: f"\"{i['slug']}\" => Icon{{title: \"{i['title']}\", slug: \"{i['slug']}\", hex: \"{i['hex']}\", source: \"{i['source']}\", svg: \"{i['svg']}\", path: \"{i['path']}\"}},"
+    expand_all_icons = lambda ds: '\n        '.join([expand_icon(icon) for icon in ds])
+
+    with open('./crate/Cargo.toml', 'w') as f:
+        f.write(f'''[package]
+name = "simple-icons"
+version = "{get_npm_version()}"
+authors = ["Mihir Singh <git.service@mihirsingh.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+''')
+
+    with open('./crate/src/lib.rs', 'w') as f:
+        f.write(f'''pub struct Icon {{
+    title: String,
+    slug: String,
+    hex: String,
+    source: String,
+    svg: String,
+    path: String,
+}}
+
+pub fn get(name: &str) -> Option<Icon> {{
+    match name {{
+        {expand_all_icons(generate_icon_dataset())}
+        _ => None
+    }}
+}}
+''')
+
+
+if __name__ == '__main__':
+    if get_npm_version() == get_crate_version():
+        print('crate in-sync with npm; exiting')
+        sys.exit(0)
+
+    generate_crate()
