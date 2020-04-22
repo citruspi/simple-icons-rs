@@ -112,12 +112,12 @@ edition = "2018"
 
     with open('./crate/src/lib.rs', 'w') as f:
         f.write(f'''pub struct Icon {{
-    title: String,
-    slug: String,
-    hex: String,
-    source: String,
-    svg: String,
-    path: String,
+    title: &str,
+    slug: &str,
+    hex: &str,
+    source: &str,
+    svg: &str,
+    path: &str,
 }}
 
 pub fn get(name: &str) -> Option<Icon> {{
