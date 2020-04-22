@@ -6,6 +6,8 @@ import re
 import urllib.request
 
 
+SVG_PATH_PATTERN = re.compile(r'path d="([\s\w\-\.,]*)"')
+
 SLUGIFY_RULES = [
     (re.compile(r'\+'), 'plus'),
     (re.compile(r'^\.'), 'dot-'),
@@ -49,3 +51,27 @@ def slugify(title):
         title = rule[0].sub(rule[1], title)
 
     return title.lower()
+
+
+def generate_icon_dataset():
+    with open('./node_modules/simple-icons/_data/simple-icons.json') as f:
+        data = json.load(f)['icons']
+
+
+    for icon in data:
+        slug = slugify(icon['title'])
+
+        with open(f'./node_modules/simple-icons/icons/{slug}.svg') as f:
+            svg_data = f.read()
+
+        icon['slug'] = slug
+        icon['svg'] = svg_data
+
+        match = SVG_PATH_PATTERN.search(svg_data)
+
+        if match is None:
+            raise Exception(f'failed to parse SVG path for {slug}')
+
+        icon['path'] = match.group(1)
+
+    return data
