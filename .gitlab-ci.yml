@@ -1,0 +1,30 @@
+default:
+  tags:
+    - shared-exec-docker
+
+stages:
+  - generate
+  - test
+
+package:
+  stage: generate
+  image: node:alpine
+  before_script:
+    - apk add python3
+    - yarn add simple-icons
+  script:
+    - python3 build.py
+  artifacts:
+    paths:
+      - crate
+    expire_in: 1 hour
+
+
+publish_dry_run:
+  stage: test
+  image: rust
+  before_script:
+    - cargo login $CRATES_IO_TOKEN
+    - cd crate
+  script:
+    - cargo publish --dry-run
