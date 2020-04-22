@@ -11,6 +11,10 @@ import urllib.request
 
 SVG_PATH_PATTERN = re.compile(r'path d="([\s\w\-\.,]*)"')
 
+SVG_ESCAPE_RULES = [
+    (re.compile(r'"'), '\\"')
+]
+
 SLUGIFY_RULES = [
     (re.compile(r'\+'), 'plus'),
     (re.compile(r'^\.'), 'dot-'),
@@ -56,6 +60,13 @@ def slugify(title):
     return title.lower()
 
 
+def escape_svg(data):
+    for rule in SVG_ESCAPE_RULES:
+        data = rule[0].sub(rule[1], data)
+
+    return data
+
+
 def generate_icon_dataset():
     with open('./node_modules/simple-icons/_data/simple-icons.json') as f:
         data = json.load(f)['icons']
@@ -68,7 +79,7 @@ def generate_icon_dataset():
             svg_data = f.read()
 
         icon['slug'] = slug
-        icon['svg'] = svg_data
+        icon['svg'] = escape_svg(svg_data)
 
         match = SVG_PATH_PATTERN.search(svg_data)
 
