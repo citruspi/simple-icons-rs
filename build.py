@@ -212,7 +212,7 @@ def generate_icon_dataset():
 
         log.info('generated data for icon', title=icon['title'], slug=slug, module=module, struct=struct)
 
-    return data
+    return {i['module']:i for i in data}
 
 
 def generate_library(dataset):
@@ -223,15 +223,20 @@ def generate_library(dataset):
         pub const ICON: Icon = Icon{{title: "{icon['title']}", slug: "{icon['slug']}", hex: "{icon['hex']}", source: "{icon['source']}", svg: "{icon['svg']}", path: "{icon['path']}"}};
     }}'''
 
-
     structs = []
     re_exports = []
     matches = []
 
-    for icon in dataset:
+    for slug in sorted(dataset.keys()):
+        icon = dataset[slug]
+
         structs.append(expand_struct(icon))
-        re_exports.append('    pub use {}::ICON as {};'.format(icon['module'], icon['struct']))
         matches.append('        "{}" => Some(icons::{}),'.format(icon['slug'], icon['struct']))
+
+        if icon['struct'] != 'ICON':
+            re_exports.append('    pub use {}::ICON as {};'.format(icon['module'], icon['struct']))
+        else:
+            re_exports.append('    pub use {}::ICON;'.format(icon['module']))
 
     log.debug('generating source file', file='lib.rs')
 
@@ -256,7 +261,7 @@ pub mod icons {{
 pub fn get(name: &str) -> Option<Icon> {{
     match name {{
 {newline.join(matches)}
-        _ => None
+        _ => None,
     }}
 }}
 ''')
