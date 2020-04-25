@@ -29,6 +29,13 @@ cargo_fmt:
   script:
     - cargo fmt -- --check
 
+cargo_test:
+  stage: test
+  image: rust
+  before_script:
+    - cd crate
+  script:
+    - cargo test
 
 publish_dry_run:
   stage: test
