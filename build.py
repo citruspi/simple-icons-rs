@@ -8,6 +8,11 @@ import shutil
 import os
 import urllib.request
 
+from peche import setup
+from peche.logging import Level
+from peche.logging.handlers import StdoutColour
+
+_, log = setup('simple-icons-rs-builder')
 
 SVG_PATH_PATTERN = re.compile(r'path d="([\s\w\-\.,]*)"')
 
@@ -41,6 +46,8 @@ def get_npm_version():
     with urllib.request.urlopen('https://registry.npmjs.org/simple-icons') as response:
         data = json.load(response)
 
+    log.debug('retrieved current NPM package version', version=data['dist-tags']['latest'])
+
     return data['dist-tags']['latest']
 
 
@@ -48,16 +55,24 @@ def get_crate_version():
     with urllib.request.urlopen('https://crates.io/api/v1/crates/docker') as response:
         data = json.load(response)
 
-    lateste_version_id = sorted(data['crate']['versions'])[-1]
+    version = [x for x in data['versions'] if x['id'] == sorted(data['crate']['versions'])[-1]][0]['num']
 
-    return [x for x in data['versions'] if x['id'] == lateste_version_id][0]['num']
+    log.debug('retrieved current crates.io package version', version=version)
+
+
+    return version
 
 
 def slugify(title):
-    for rule in SLUGIFY_RULES:
-        title = rule[0].sub(rule[1], title)
+    slug = title.lower()
 
-    return title.lower()
+    for rule in SLUGIFY_RULES:
+        slug = rule[0].sub(rule[1], slug)
+
+
+    log.debug('generated slug for title', title=title, slug=slug)
+
+    return slug
 
 
 def escape_svg(data):
@@ -73,6 +88,8 @@ def generate_icon_dataset():
 
 
     for icon in data:
+        log.debug('generating data for icon', icon_title=icon['title'])
+
         slug = slugify(icon['title'])
 
         with open(f'./node_modules/simple-icons/icons/{slug}.svg') as f:
@@ -91,17 +108,19 @@ def generate_icon_dataset():
     return data
 
 
-def generate_crate():
+def generate_crate(version):
     shutil.rmtree('./crate', ignore_errors=True)
     os.makedirs('./crate/src')
 
     expand_icon = lambda i: f"\"{i['slug']}\" => Some(Icon{{title: \"{i['title']}\", slug: \"{i['slug']}\", hex: \"{i['hex']}\", source: \"{i['source']}\", svg: \"{i['svg']}\", path: \"{i['path']}\"}}),"
     expand_all_icons = lambda ds: '\n        '.join([expand_icon(icon) for icon in ds])
 
+    log.debug('generating crate file', file='Cargo.toml')
+
     with open('./crate/Cargo.toml', 'w') as f:
         f.write(f'''[package]
 name = "simple-icons"
-version = "{get_npm_version()}"
+version = "{version}"
 authors = ["Mihir Singh <git.service@mihirsingh.com>"]
 edition = "2018"
 
@@ -109,6 +128,8 @@ edition = "2018"
 
 [dependencies]
 ''')
+
+    log.debug('generating source file', file='lib.rs')
 
     with open('./crate/src/lib.rs', 'w') as f:
         f.write(f'''#[derive(Debug)]
@@ -129,10 +150,21 @@ pub fn get(name: &str) -> Option<Icon> {{
 }}
 ''')
 
+    log.info('finished generating crate', version=version)
+
 
 if __name__ == '__main__':
-    if get_npm_version() == get_crate_version():
-        print('crate in-sync with npm; exiting')
+    log.level = Level.Debug
+    log.drop_handlers()
+    log.add_handler(StdoutColour)
+
+    log.info('starting crate builder')
+
+    npm_version = get_npm_version()
+    crate_version = get_crate_version()
+
+    if npm_version == crate_version:
+        log.error('crate in-sync with npm; exiting')
         sys.exit(0)
 
-    generate_crate()
+    generate_crate(npm_version)
