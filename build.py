@@ -249,13 +249,16 @@ def generate_icon_dataset():
 def generate_crate_config():
     log.debug('generating crate config', file='Cargo.toml')
 
+    with open('./Cargo.toml', 'r') as f:
+        contents = f.read()
+
+    contents = contents.format(
+        NAME=CRATE_NAME,
+        VERSION=DEPLOY_VERSION
+    )
+
     with open('./crate/Cargo.toml', 'w') as f:
-        f.write(f'''[package]
-name = "{CRATE_NAME}"
-version = "{DEPLOY_VERSION}"
-authors = ["Mihir Singh <git.service@mihirsingh.com>"]
-edition = "2018"
-''')
+        f.write(contents)
 
 
 def generate_library(dataset):
