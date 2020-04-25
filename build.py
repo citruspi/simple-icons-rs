@@ -8,16 +8,43 @@ import shutil
 import os
 import urllib.request
 
+from inflect import engine as num_to_word_gen
 from peche import setup
-from peche.logging import Level
 from peche.logging.handlers import StdoutColour
 
+
 _, log = setup('simple-icons-rs-builder')
+num_to_word = num_to_word_gen().number_to_words
 
 SVG_PATH_PATTERN = re.compile(r'path d="([\s\w\-\.,]*)"')
+NUM_PATTERN = re.compile(r'(\d+)')
 
 SVG_ESCAPE_RULES = [
     (re.compile(r'"'), '\\"')
+]
+
+COMMON_RULES = [
+    (re.compile(r'[!:’\']'), ''),
+    (re.compile(r'À|Á|Â|Ã|Ä'), 'a'),
+    (re.compile(r'Ç|Č|Ć'), 'C'),
+    (re.compile(r'È|É|Ê|Ë'), 'E'),
+    (re.compile(r'Ì|Í|Î|Ï'), 'I'),
+    (re.compile(r'Ñ|Ň|Ń'), 'N'),
+    (re.compile(r'Ò|Ó|Ô|Õ|Ö'), 'O'),
+    (re.compile(r'Š|Ś'), 'S'),
+    (re.compile(r'Ù|Ú|Û|Ü'), 'U'),
+    (re.compile(r'Ý|Ÿ'), 'Y'),
+    (re.compile(r'Ž|Ź'), 'Z'),
+    (re.compile(r'à|á|â|ã|ä'), 'a'),
+    (re.compile(r'ç|č|ć'), 'c'),
+    (re.compile(r'è|é|ê|ë'), 'e'),
+    (re.compile(r'ì|í|î|ï'), 'i'),
+    (re.compile(r'ñ|ň|ń'), 'n'),
+    (re.compile(r'ò|ó|ô|õ|ö'), 'o'),
+    (re.compile(r'š|ś'), 's'),
+    (re.compile(r'ù|ú|û|ü'), 'u'),
+    (re.compile(r'ý|ÿ'), 'y'),
+    (re.compile(r'ž|ź'), 'z'),
 ]
 
 SLUGIFY_RULES = [
@@ -28,17 +55,35 @@ SLUGIFY_RULES = [
     (re.compile(r'^&'), 'and-'),
     (re.compile(r'&$'), '-and'),
     (re.compile(r'&'), '-and-'),
-    (re.compile(r'[ !:’\']'), ''),
-    (re.compile(r'à|á|â|ã|ä', re.IGNORECASE), 'a'),
-    (re.compile(r'ç|č|ć', re.IGNORECASE), 'c'),
-    (re.compile(r'è|é|ê|ë', re.IGNORECASE), 'e'),
-    (re.compile(r'ì|í|î|ï', re.IGNORECASE), 'i'),
-    (re.compile(r'ñ|ň|ń', re.IGNORECASE), 'n'),
-    (re.compile(r'ò|ó|ô|õ|ö', re.IGNORECASE), 'o'),
-    (re.compile(r'š|ś', re.IGNORECASE), 's'),
-    (re.compile(r'ù|ú|û|ü', re.IGNORECASE), 'u'),
-    (re.compile(r'ý|ÿ', re.IGNORECASE), 'y'),
-    (re.compile(r'ž|ź', re.IGNORECASE), 'z'),
+    (re.compile(r'\s'), ''),
+]
+
+MODULIFY_RULES = [
+    (re.compile(r'\+'), 'plus'),
+    (re.compile(r'^\.'), 'dot_'),
+    (re.compile(r'\.$'), '_dot'),
+    (re.compile(r'\.'), '_dot_'),
+    (re.compile(r'^&'), 'and_'),
+    (re.compile(r'&$'), '_and'),
+    (re.compile(r'&'), '_and_'),
+    (re.compile(r'[\-\s]+'), '_'),
+    (re.compile(r'_+'), '_'),
+    (re.compile(r'^_+'), ''),
+    (re.compile(r'_+$'), ''),
+    (re.compile(r'^abstract$'), 'r#abstract'),
+    (re.compile(r'^box$'), 'r#box'),
+    (re.compile(r'^loop$'), 'r#loop'),
+]
+
+STRUCTIFY_RULES = [
+    (re.compile(r'\+'), 'Plus'),
+    (re.compile(r'^\.'), 'Dot_'),
+    (re.compile(r'\.$'), '_Dot'),
+    (re.compile(r'\.'), '_Dot_'),
+    (re.compile(r'^&'), 'And_'),
+    (re.compile(r'&$'), '_And'),
+    (re.compile(r'&'), '_And_'),
+    (re.compile(r'[\-\s_]+'), ''),
 ]
 
 
@@ -63,16 +108,69 @@ def get_crate_version():
     return version
 
 
+def sub_numbers(s, sub=' '):
+    m = NUM_PATTERN.findall(s)
+
+    if m is None:
+        return m
+
+    for g in m:
+        human = ''.join([t.capitalize() for t in num_to_word(int(g)).replace('-', sub).split(' ')])
+        s = s.replace(g, f' {human} ')
+
+    return s
+
+
 def slugify(title):
     slug = title.lower()
 
-    for rule in SLUGIFY_RULES:
+    rules = COMMON_RULES.copy()
+    rules.extend(SLUGIFY_RULES)
+
+    for rule in rules:
         slug = rule[0].sub(rule[1], slug)
 
+    slug = slug.replace(' ', '')
 
     log.debug('generated slug for title', title=title, slug=slug)
 
     return slug
+
+
+def modulify(title):
+    module = sub_numbers(title, sub='_').lower()
+
+    rules = COMMON_RULES.copy()
+    rules.extend(MODULIFY_RULES)
+
+    for rule in rules:
+        module = rule[0].sub(rule[1], module)
+
+    log.debug('generated module for title', title=title, module=module)
+
+    return module
+
+
+def structify(title):
+    struct = ' '.join([t[0].upper() + t[1:] for t in sub_numbers(title).replace('-', ' ').replace('.', ' Dot ').split(' ') if len(t.strip()) > 0])
+
+    rules = COMMON_RULES.copy()
+    rules.extend(STRUCTIFY_RULES)
+
+    for rule in rules:
+        struct = rule[0].sub(rule[1], struct)
+
+    log.debug('generated struct for title', title=title, struct=struct)
+
+    return struct
+
+
+def tokens(title):
+    slug = slugify(title)
+    module = modulify(title)
+    struct = structify(title)
+
+    return slug, module, struct
 
 
 def escape_svg(data):
@@ -95,7 +193,14 @@ def generate_icon_dataset():
         with open(f'./node_modules/simple-icons/icons/{slug}.svg') as f:
             svg_data = f.read()
 
+        try:
+            slug, module, struct = tokens(icon['title'])
+        except Exception:
+            raise Exception('failed to tokenize icon', icon=icon['title'])
+
         icon['slug'] = slug
+        icon['module'] = module
+        icon['struct'] = struct
         icon['svg'] = escape_svg(svg_data)
 
         match = SVG_PATH_PATTERN.search(svg_data)
@@ -105,15 +210,60 @@ def generate_icon_dataset():
 
         icon['path'] = match.group(1)
 
+        log.info('generated data for icon', title=icon['title'], slug=slug, module=module, struct=struct)
+
     return data
 
+
+def generate_library(dataset):
+    def expand_struct(icon):
+        return f'''    mod {icon['module']} {{
+        use super::super::Icon;
+
+        pub const ICON: Icon = Icon{{title: "{icon['title']}", slug: "{icon['slug']}", hex: "{icon['hex']}", source: "{icon['source']}", svg: "{icon['svg']}", path: "{icon['path']}"}};
+    }}'''
+
+
+    structs = []
+    re_exports = []
+    matches = []
+
+    for icon in dataset:
+        structs.append(expand_struct(icon))
+        re_exports.append('    pub use {}::ICON as {};'.format(icon['module'], icon['struct']))
+        matches.append('        "{}" => Some(icons::{}),'.format(icon['slug'], icon['struct']))
+
+    log.debug('generating source file', file='lib.rs')
+
+    newline = '\n'
+
+    with open('./crate/src/lib.rs', 'w') as f:
+        f.write(f'''#[derive(Debug)]
+pub struct Icon {{
+    pub title: &'static str,
+    pub slug: &'static str,
+    pub hex: &'static str,
+    pub source: &'static str,
+    pub svg: &'static str,
+    pub path: &'static str,
+}}
+
+pub mod icons {{
+{newline.join(structs)}
+{newline.join(re_exports)}
+}}
+
+pub fn get(name: &str) -> Option<Icon> {{
+    match name {{
+{newline.join(matches)}
+        _ => None
+    }}
+}}
+''')
 
 def generate_crate(version):
     shutil.rmtree('./crate', ignore_errors=True)
     os.makedirs('./crate/src')
-
-    expand_icon = lambda i: f"\"{i['slug']}\" => Some(Icon{{title: \"{i['title']}\", slug: \"{i['slug']}\", hex: \"{i['hex']}\", source: \"{i['source']}\", svg: \"{i['svg']}\", path: \"{i['path']}\"}}),"
-    expand_all_icons = lambda ds: '\n        '.join([expand_icon(icon) for icon in ds])
 
     log.debug('generating crate file', file='Cargo.toml')
 
@@ -129,32 +279,13 @@ edition = "2018"
 [dependencies]
 ''')
 
-    log.debug('generating source file', file='lib.rs')
+    generate_library(generate_icon_dataset())
 
-    with open('./crate/src/lib.rs', 'w') as f:
-        f.write(f'''#[derive(Debug)]
-pub struct Icon {{
-    pub title: &'static str,
-    pub slug: &'static str,
-    pub hex: &'static str,
-    pub source: &'static str,
-    pub svg: &'static str,
-    pub path: &'static str,
-}}
-
-pub fn get(name: &str) -> Option<Icon> {{
-    match name {{
-        {expand_all_icons(generate_icon_dataset())}
-        _ => None
-    }}
-}}
-''')
 
     log.info('finished generating crate', version=version)
 
 
 if __name__ == '__main__':
-    log.level = Level.Debug
     log.drop_handlers()
     log.add_handler(StdoutColour)
 
