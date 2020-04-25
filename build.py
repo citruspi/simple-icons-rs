@@ -278,7 +278,7 @@ def generate_library(dataset):
         icon = dataset[slug]
 
         structs.append(expand_struct(icon))
-        matches.append('        "{}" => Some(icons::{}),'.format(icon['slug'], icon['struct']))
+        matches.append('        "{}" => Some(icons::{}),'.format(icon['title'], icon['struct']))
 
         if icon['struct'] != 'ICON':
             re_exports.append('    pub use self::{}::ICON as {};'.format(icon['module'], icon['struct']))
