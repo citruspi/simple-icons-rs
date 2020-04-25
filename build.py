@@ -215,6 +215,22 @@ def generate_icon_dataset():
     return {i['module']:i for i in data}
 
 
+def generate_crate_config():
+    log.debug('generating crate config', file='Cargo.toml')
+
+    with open('./crate/Cargo.toml', 'w') as f:
+        f.write(f'''[package]
+    name = "simple-icons"
+    version = "{version}"
+    authors = ["Mihir Singh <git.service@mihirsingh.com>"]
+    edition = "2018"
+
+    # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+    [dependencies]
+''')
+
+
 def generate_library(dataset):
     def expand_struct(icon):
         return f'''    mod {icon['module']} {{
@@ -270,22 +286,8 @@ def generate_crate(version):
     shutil.rmtree('./crate', ignore_errors=True)
     os.makedirs('./crate/src')
 
-    log.debug('generating crate file', file='Cargo.toml')
-
-    with open('./crate/Cargo.toml', 'w') as f:
-        f.write(f'''[package]
-name = "simple-icons"
-version = "{version}"
-authors = ["Mihir Singh <git.service@mihirsingh.com>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-''')
-
+    generate_crate_config()
     generate_library(generate_icon_dataset())
-
 
     log.info('finished generating crate', version=version)
 
