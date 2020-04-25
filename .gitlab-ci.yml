@@ -5,6 +5,7 @@ default:
 stages:
   - generate
   - test
+  - publish
 
 package:
   stage: generate
@@ -42,3 +43,14 @@ publish_dry_run:
     - cargo login $CRATES_IO_TOKEN
   script:
     - cargo publish --dry-run --allow-dirty
+
+crates_io:
+  stage: publish
+  image: rust
+  before_script:
+    - cargo login $CRATES_IO_TOKEN
+  script:
+    - cargo publish --allow-dirty
+  only:
+    refs:
+      - master
