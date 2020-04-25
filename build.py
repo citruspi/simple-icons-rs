@@ -277,9 +277,9 @@ def generate_library(dataset):
         matches.append('        "{}" => Some(icons::{}),'.format(icon['slug'], icon['struct']))
 
         if icon['struct'] != 'ICON':
-            re_exports.append('    pub use {}::ICON as {};'.format(icon['module'], icon['struct']))
+            re_exports.append('    pub use self::{}::ICON as {};'.format(icon['module'], icon['struct']))
         else:
-            re_exports.append('    pub use {}::ICON;'.format(icon['module']))
+            re_exports.append('    pub use self::{}::ICON;'.format(icon['module']))
 
     log.debug('generating source file', file='lib.rs')
 
