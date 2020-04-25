@@ -20,6 +20,15 @@ package:
       - crate
     expire_in: 1 hour
 
+cargo_fmt:
+  stage: test
+  image: rust
+  before_script:
+    - cd crate
+    - rustup component add rustfmt
+  script:
+    - cargo fmt -- --check
+
 
 publish_dry_run:
   stage: test
