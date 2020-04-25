@@ -17,14 +17,14 @@ package:
     - python3 build.py
   artifacts:
     paths:
-      - crate
+      - src
+      - Cargo.toml
     expire_in: 1 hour
 
 cargo_fmt:
   stage: test
   image: rust
   before_script:
-    - cd crate
     - rustup component add rustfmt
   script:
     - cargo fmt -- --check
@@ -32,8 +32,6 @@ cargo_fmt:
 cargo_test:
   stage: test
   image: rust
-  before_script:
-    - cd crate
   script:
     - cargo test
 
@@ -42,6 +40,5 @@ publish_dry_run:
   image: rust
   before_script:
     - cargo login $CRATES_IO_TOKEN
-    - cd crate
   script:
     - cargo publish --dry-run --allow-dirty

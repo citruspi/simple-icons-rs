@@ -1,6 +1,4 @@
 [package]
-name = "{NAME}"
-version = "{VERSION}"
 authors = ["Mihir Singh <git.service@mihirsingh.com>"]
 edition = "2018"
 license = "CC0-1.0"
@@ -9,3 +7,4 @@ homepage = "https://src.doom.fm/citruspi/simple-icons-rs"
 repository = "https://src.doom.fm/citruspi/simple-icons-rs"
 keywords = ["icons", "svg", "simple-icons"]
 categories = ["api-bindings", "graphics", "multimedia::images"]
+include = ["Cargo.toml", "src/lib.rs"]

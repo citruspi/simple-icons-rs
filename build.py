@@ -249,16 +249,17 @@ def generate_icon_dataset():
 def generate_crate_config():
     log.debug('generating crate config', file='Cargo.toml')
 
-    with open('./Cargo.toml', 'r') as f:
-        contents = f.read()
+    with open('./Cargo.toml', 'r') as f: contents = f.read()
 
-    contents = contents.format(
-        NAME=CRATE_NAME,
-        VERSION=DEPLOY_VERSION
-    )
+    if 'name' in contents: contents = re.sub(r'name\s*=\s*"[A-Za-z_\-]+"', f'name = "{CRATE_NAME}"', contents)
+    else: contents += f'\nname = "{CRATE_NAME}"'
 
-    with open('./crate/Cargo.toml', 'w') as f:
-        f.write(contents)
+    if 'version' in contents: contents = re.sub(r'version\s*=\s*"[\d\.]*"', f'version = "{DEPLOY_VERSION}"', contents)
+    else: contents += f'\nversion = "{DEPLOY_VERSION}"'
+
+    contents = '\n'.join([l for l in contents.split('\n') if len(l.strip()) > 0]) + '\n'
+
+    with open('./Cargo.toml', 'w') as f: f.write(contents)
 
 
 def generate_library(dataset):
@@ -288,7 +289,7 @@ def generate_library(dataset):
 
     newline = '\n'
 
-    with open('./crate/src/lib.rs', 'w') as f:
+    with open('./src/lib.rs', 'w') as f:
         f.write(f'''#[derive(Debug)]
 pub struct Icon {{
     pub title: &'static str,
@@ -313,8 +314,8 @@ pub fn get(name: &str) -> Option<Icon> {{
 ''')
 
 def generate_crate():
-    shutil.rmtree('./crate', ignore_errors=True)
-    os.makedirs('./crate/src')
+    shutil.rmtree('./src', ignore_errors=True)
+    os.makedirs('./src')
 
     generate_crate_config()
     generate_library(generate_icon_dataset())
