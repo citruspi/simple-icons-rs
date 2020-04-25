@@ -16,6 +16,15 @@ from peche.logging.handlers import StdoutColour
 _, log = setup('simple-icons-rs-builder')
 num_to_word = num_to_word_gen().number_to_words
 
+NPM_PKG_NAME = os.getenv('NPM_PKG_NAME', 'simple-icons')
+NPM_PKG_VERSION = None
+CRATE_NAME = os.getenv('CRATE_NAME', 'simple-icons')
+CURRENT_CRATE_VERSION = None
+DEPLOY_VERSION = os.getenv('DEPLOY_VERSION')
+FORCE_DEPLOY = os.getenv('FORCE_DEPLOY', '')
+DEPLOY = False
+
+
 SVG_PATH_PATTERN = re.compile(r'path d="([\s\w\-\.,]*)"')
 NUM_PATTERN = re.compile(r'(\d+)')
 
@@ -88,24 +97,46 @@ STRUCTIFY_RULES = [
 
 
 def get_npm_version():
-    with urllib.request.urlopen('https://registry.npmjs.org/simple-icons') as response:
+    global NPM_PKG_VERSION
+
+    with urllib.request.urlopen(f'https://registry.npmjs.org/{NPM_PKG_NAME}') as response:
         data = json.load(response)
 
-    log.debug('retrieved current NPM package version', version=data['dist-tags']['latest'])
+    NPM_PKG_VERSION = data['dist-tags']['latest']
 
-    return data['dist-tags']['latest']
+    log.debug('retrieved current NPM package version', version=NPM_PKG_VERSION)
 
 
 def get_crate_version():
-    with urllib.request.urlopen('https://crates.io/api/v1/crates/docker') as response:
-        data = json.load(response)
+    global CURRENT_CRATE_VERSION
 
-    version = [x for x in data['versions'] if x['id'] == sorted(data['crate']['versions'])[-1]][0]['num']
+    try:
+        with urllib.request.urlopen(f'https://crates.io/api/v1/crates/{CRATE_NAME}') as response:
+            data = json.load(response)
 
-    log.debug('retrieved current crates.io package version', version=version)
+        CURRENT_CRATE_VERSION = [x for x in data['versions'] if x['id'] == sorted(data['crate']['versions'])[-1]][0]['num']
+    except:
+        pass
+
+    log.debug('retrieved current crates.io package version', version=CURRENT_CRATE_VERSION)
 
 
-    return version
+def configure():
+    global DEPLOY
+    global DEPLOY_VERSION
+
+    get_crate_version()
+    get_npm_version()
+
+    force_deploy = FORCE_DEPLOY.lower() == 'true'
+
+    if force_deploy or NPM_PKG_VERSION != CURRENT_CRATE_VERSION: DEPLOY = True
+    if DEPLOY_VERSION is None: DEPLOY_VERSION = NPM_PKG_VERSION
+
+    log.info('loaded configuration',
+             npm_pkg=NPM_PKG_NAME, npm_version=NPM_PKG_VERSION,
+             crate_name=CRATE_NAME, current_crate_version=CURRENT_CRATE_VERSION,
+             force_deploy=force_deploy, deploy_version=DEPLOY_VERSION, proceed=DEPLOY)
 
 
 def sub_numbers(s, sub=' '):
@@ -220,14 +251,10 @@ def generate_crate_config():
 
     with open('./crate/Cargo.toml', 'w') as f:
         f.write(f'''[package]
-    name = "simple-icons"
-    version = "{version}"
-    authors = ["Mihir Singh <git.service@mihirsingh.com>"]
-    edition = "2018"
-
-    # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-    [dependencies]
+name = "{CRATE_NAME}"
+version = "{DEPLOY_VERSION}"
+authors = ["Mihir Singh <git.service@mihirsingh.com>"]
+edition = "2018"
 ''')
 
 
@@ -282,14 +309,14 @@ pub fn get(name: &str) -> Option<Icon> {{
 }}
 ''')
 
-def generate_crate(version):
+def generate_crate():
     shutil.rmtree('./crate', ignore_errors=True)
     os.makedirs('./crate/src')
 
     generate_crate_config()
     generate_library(generate_icon_dataset())
 
-    log.info('finished generating crate', version=version)
+    log.info('finished generating crate', version=DEPLOY_VERSION)
 
 
 if __name__ == '__main__':
@@ -298,11 +325,14 @@ if __name__ == '__main__':
 
     log.info('starting crate builder')
 
-    npm_version = get_npm_version()
-    crate_version = get_crate_version()
+    configure()
 
-    if npm_version == crate_version:
-        log.error('crate in-sync with npm; exiting')
+    if not DEPLOY:
+        if NPM_PKG_VERSION == CURRENT_CRATE_VERSION:
+            log.error('crate in-sync with npm; exiting')
+        else:
+            log.error('build skipped')
+
         sys.exit(0)
 
-    generate_crate(npm_version)
+    generate_crate()
