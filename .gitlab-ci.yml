@@ -12,6 +12,7 @@ package:
   before_script:
     - apk add python3
     - yarn add simple-icons
+    - pip3 install -r requirements.txt
   script:
     - python3 build.py
   artifacts:
