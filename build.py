@@ -111,7 +111,8 @@ edition = "2018"
 ''')
 
     with open('./crate/src/lib.rs', 'w') as f:
-        f.write(f'''pub struct Icon {{
+        f.write(f'''#[derive(Debug)]
+pub struct Icon {{
     pub title: String,
     pub slug: String,
     pub hex: String,
