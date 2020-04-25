@@ -95,7 +95,7 @@ def generate_crate():
     shutil.rmtree('./crate', ignore_errors=True)
     os.makedirs('./crate/src')
 
-    expand_icon = lambda i: f"\"{i['slug']}\" => Some(Icon{{title: \"{i['title']}\".into(), slug: \"{i['slug']}\".into(), hex: \"{i['hex']}\".into(), source: \"{i['source']}\".into(), svg: \"{i['svg']}\".into(), path: \"{i['path']}\".into()}}),"
+    expand_icon = lambda i: f"\"{i['slug']}\" => Some(Icon{{title: \"{i['title']}\", slug: \"{i['slug']}\", hex: \"{i['hex']}\", source: \"{i['source']}\", svg: \"{i['svg']}\", path: \"{i['path']}\"}}),"
     expand_all_icons = lambda ds: '\n        '.join([expand_icon(icon) for icon in ds])
 
     with open('./crate/Cargo.toml', 'w') as f:
@@ -113,12 +113,12 @@ edition = "2018"
     with open('./crate/src/lib.rs', 'w') as f:
         f.write(f'''#[derive(Debug)]
 pub struct Icon {{
-    pub title: String,
-    pub slug: String,
-    pub hex: String,
-    pub source: String,
-    pub svg: String,
-    pub path: String,
+    pub title: &'static str,
+    pub slug: &'static str,
+    pub hex: &'static str,
+    pub source: &'static str,
+    pub svg: &'static str,
+    pub path: &'static str,
 }}
 
 pub fn get(name: &str) -> Option<Icon> {{
